@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --color-neon-pink: #ff00ff;
+  --color-neon-purple: #9d00ff;
+  --color-neon-pink-dim: #cc00cc;
+  --color-neon-purple-dim: #7a00cc;
+
+  --color-bg-base: #08080f;
+  --color-bg-card: #0e0e1a;
+  --color-bg-card-hover: #13131f;
+  --color-bg-input: #0a0a15;
+
+  --color-border-subtle: #1e1e35;
+  --color-border-glow: #3d1a5e;
+
+  --color-text-primary: #f0f0ff;
+  --color-text-secondary: #8888aa;
+  --color-text-muted: #555577;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg-base);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-glow);
+    border-radius: 3px;
+  }
+}
+
+@layer utilities {
+  .glow-pink {
+    box-shadow: 0 0 10px rgba(255, 0, 255, 0.4), 0 0 20px rgba(255, 0, 255, 0.2);
+  }
+  .glow-purple {
+    box-shadow: 0 0 10px rgba(157, 0, 255, 0.4), 0 0 20px rgba(157, 0, 255, 0.2);
+  }
+  .glow-text-pink {
+    text-shadow: 0 0 8px rgba(255, 0, 255, 0.8);
+  }
+  .glow-text-purple {
+    text-shadow: 0 0 8px rgba(157, 0, 255, 0.8);
+  }
+  .card-border {
+    border: 1px solid var(--color-border-subtle);
+  }
+  .card-border-glow {
+    border: 1px solid var(--color-border-glow);
+    box-shadow: 0 0 15px rgba(157, 0, 255, 0.15);
+  }
+}
