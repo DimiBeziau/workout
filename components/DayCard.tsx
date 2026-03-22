@@ -45,7 +45,7 @@ export function DayCard({ dayName, dayDate, dayOfWeek, weekStart, plan, template
 
   return (
     <div
-      className="rounded-xl p-4 flex flex-col gap-3 transition-all h-full"
+      className="rounded-xl p-4 flex flex-col gap-3 transition-all"
       style={{
         background: isRest ? 'rgba(8,8,15,0.6)' : 'var(--color-bg-card)',
         ...borderStyle,

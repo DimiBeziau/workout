@@ -75,7 +75,7 @@ export function WeekView({ weekStart, prevWeek, nextWeek, templates, plans }: Pr
       </div>
 
       {/* Week grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 lg:min-h-[60vh]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
         {Array.from({ length: 7 }, (_, i) => {
           const dayDate = addDays(weekStartDate, i)
           const dayOfWeek = i + 1 // 1=Monday, 7=Sunday

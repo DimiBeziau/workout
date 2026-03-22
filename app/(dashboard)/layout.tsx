@@ -9,7 +9,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar username={session.username} />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+      <main className="flex-1 w-full px-2 lg:px-4 py-6 max-w-[1600px] mx-auto">
         {children}
       </main>
     </div>
