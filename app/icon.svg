@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="neon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9d00ff"/>
+      <stop offset="100%" stop-color="#ff00ff"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="32" height="32" rx="7" fill="#08080f"/>
+
+  <!-- Dumbbell -->
+  <g filter="url(#glow)" fill="url(#neon)">
+    <!-- Left outer plate -->
+    <rect x="1.5" y="9" width="3.5" height="14" rx="1.5"/>
+    <!-- Left inner collar -->
+    <rect x="5"   y="11.5" width="2.5" height="9" rx="1"/>
+    <!-- Bar -->
+    <rect x="7.5" y="14" width="17" height="4" rx="2"/>
+    <!-- Right inner collar -->
+    <rect x="24.5" y="11.5" width="2.5" height="9" rx="1"/>
+    <!-- Right outer plate -->
+    <rect x="27"  y="9" width="3.5" height="14" rx="1.5"/>
+  </g>
+</svg>

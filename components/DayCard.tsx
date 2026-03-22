@@ -4,6 +4,7 @@ import { useTransition } from 'react'
 import type { SessionTemplate, WeeklyPlan } from '@/lib/db/schema'
 import { setPlanAction } from '@/app/actions/planning'
 import { Moon, Zap } from 'lucide-react'
+import { CustomSelect, type SelectOption } from '@/components/ui/CustomSelect'
 
 interface WeeklyPlanWithTemplate extends WeeklyPlan {
   sessionTemplate?: SessionTemplate | null
@@ -129,31 +130,21 @@ export function DayCard({ dayName, dayDate, dayOfWeek, weekStart, plan, template
       )}
 
       {/* Selector */}
-      <select
+      <CustomSelect
+        size="sm"
         disabled={isPending}
-        value={
-          hasSession
-            ? String(plan!.sessionTemplateId)
-            : isRest
-            ? 'rest'
-            : ''
-        }
-        onChange={(e) => handleChange(e.target.value)}
-        className="w-full text-xs rounded-lg px-2.5 py-1.5 outline-none transition-all disabled:opacity-50 cursor-pointer"
-        style={{
-          background: 'var(--color-bg-input)',
-          border: '1px solid var(--color-border-subtle)',
-          color: 'var(--color-text-secondary)',
-        }}
-      >
-        <option value="">— Planifier —</option>
-        <option value="rest">😴 Repos</option>
-        {templates.map((t) => (
-          <option key={t.id} value={String(t.id)}>
-            {t.type === 'cardio' ? '🏃' : '💪'} {t.title}
-          </option>
-        ))}
-      </select>
+        value={hasSession ? String(plan!.sessionTemplateId) : isRest ? 'rest' : ''}
+        onChange={handleChange}
+        placeholder="— Planifier —"
+        options={[
+          { value: 'rest', label: '😴 Repos', accent: 'muted' },
+          ...templates.map<SelectOption>((t) => ({
+            value: String(t.id),
+            label: `${t.type === 'cardio' ? '🏃' : '💪'} ${t.title}`,
+            accent: t.type === 'cardio' ? 'pink' : 'purple',
+          })),
+        ]}
+      />
     </div>
   )
 }

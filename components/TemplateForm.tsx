@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { useActionState } from 'react'
 import { createTemplateAction } from '@/app/actions/sessions'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 
 export function TemplateForm() {
   const [state, action, isPending] = useActionState(createTemplateAction, null)
+  const [type, setType] = useState('')
 
   return (
     <form action={action} className="space-y-4">
@@ -40,23 +43,16 @@ export function TemplateForm() {
           <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             Type *
           </label>
-          <select
+          <CustomSelect
             name="type"
-            required
-            defaultValue=""
-            className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-all cursor-pointer"
-            style={{
-              background: 'var(--color-bg-input)',
-              border: '1px solid var(--color-border-subtle)',
-              color: 'var(--color-text-primary)',
-            }}
-            onFocus={(e) => { e.target.style.borderColor = 'var(--color-neon-purple)' }}
-            onBlur={(e) => { e.target.style.borderColor = 'var(--color-border-subtle)' }}
-          >
-            <option value="" disabled>— Choisir un type —</option>
-            <option value="cardio">🏃 Cardio</option>
-            <option value="renfo">💪 Renfo</option>
-          </select>
+            value={type}
+            onChange={setType}
+            placeholder="— Choisir un type —"
+            options={[
+              { value: 'cardio', label: '🏃 Cardio', accent: 'pink' },
+              { value: 'renfo', label: '💪 Renfo', accent: 'purple' },
+            ]}
+          />
         </div>
 
         <div className="space-y-1.5">
