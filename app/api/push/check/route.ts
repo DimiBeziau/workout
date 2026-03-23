@@ -5,18 +5,22 @@ import { db } from '@/lib/db'
 import { weeklyPlans, pushSubscriptions } from '@/lib/db/schema'
 
 export async function GET(req: NextRequest) {
-  // Configure VAPID inside the handler so it's not called at build time
-  webpush.setVapidDetails(
-    process.env.VAPID_EMAIL ?? 'mailto:admin@example.com',
-    process.env.VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!
-  )
-
   // Protect with a shared secret header
   const secret = req.headers.get('x-cron-secret')
   if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+  const vapidEmail = process.env.VAPID_EMAIL ?? 'mailto:admin@example.com'
+
+  if (!vapidPublicKey || !vapidPrivateKey) {
+    return NextResponse.json({ error: 'VAPID keys not configured' }, { status: 500 })
+  }
+
+  // Configure VAPID inside the handler so it's not called at build time
+  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey)
 
   const now = new Date()
   // Window: sessions starting between now+9min and now+10min
