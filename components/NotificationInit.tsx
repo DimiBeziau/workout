@@ -15,6 +15,19 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return outputArray
 }
 
+async function saveSubscription(sub: PushSubscription): Promise<boolean> {
+  try {
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub.toJSON()),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 export function NotificationInit() {
   const [status, setStatus] = useState<Status>('loading')
   const vapidKeyRef = useRef<string>('')
@@ -26,27 +39,17 @@ export function NotificationInit() {
         window.matchMedia('(display-mode: standalone)').matches ||
         (navigator as Navigator & { standalone?: boolean }).standalone === true
 
-      // iOS in browser (not PWA): push not supported, guide user
       if (isIOS && !isStandalone) {
         setStatus('ios-browser')
         return
       }
 
-      if (
-        !('Notification' in window) ||
-        !('serviceWorker' in navigator) ||
-        !('PushManager' in window)
-      ) {
+      if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
         setStatus('unsupported')
         return
       }
 
-      if (Notification.permission === 'denied') {
-        setStatus('denied')
-        return
-      }
-
-      // Fetch VAPID public key at runtime (not baked in at build time)
+      // Fetch VAPID public key at runtime
       try {
         const res = await fetch('/api/push/vapid-key')
         const { publicKey } = await res.json() as { publicKey: string }
@@ -57,31 +60,37 @@ export function NotificationInit() {
         return
       }
 
+      if (Notification.permission === 'denied') {
+        setStatus('denied')
+        return
+      }
+
       if (Notification.permission === 'granted') {
-        // Check if already subscribed on this device
+        // Auto-subscribe without user gesture (works on Android after permission already granted)
         try {
           const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
           await navigator.serviceWorker.ready
-          const existing = await reg.pushManager.getSubscription()
-          if (existing) {
-            // Re-confirm subscription is saved server-side
-            await fetch('/api/push/subscribe', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(existing.toJSON()),
+
+          let sub = await reg.pushManager.getSubscription()
+          if (!sub) {
+            // Create new subscription (no user gesture needed on Android once permission granted)
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(vapidKeyRef.current),
             })
-            setStatus('granted')
-            return
           }
+          await saveSubscription(sub)
+          setStatus('granted')
+          return
         } catch {
-          // Fall through to show the prompt so user can re-subscribe
+          // Auto-subscribe failed (e.g. iOS requires user gesture) → show banner
         }
       }
 
       setStatus('prompt')
     }
 
-    init().catch(() => setStatus('unsupported'))
+    init().catch(() => setStatus('prompt'))
   }, [])
 
   // Everything in one handler so iOS recognises it as a continuous user gesture
@@ -90,18 +99,15 @@ export function NotificationInit() {
     if (!vapidKey) return
 
     try {
-      // 1. Register service worker
       const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
       await navigator.serviceWorker.ready
 
-      // 2. Request permission (must originate from user gesture — we're in onClick)
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         setStatus('denied')
         return
       }
 
-      // 3. Subscribe to push (still within the user gesture async chain)
       let sub = await reg.pushManager.getSubscription()
       if (!sub) {
         sub = await reg.pushManager.subscribe({
@@ -110,33 +116,20 @@ export function NotificationInit() {
         })
       }
 
-      // 4. Save subscription server-side
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub.toJSON()),
-      })
-
-      if (res.ok) {
-        setStatus('granted')
-      } else {
-        setStatus('error')
-      }
+      const ok = await saveSubscription(sub)
+      setStatus(ok ? 'granted' : 'error')
     } catch (err) {
       console.error('[Push] Subscription failed:', err)
       setStatus('error')
     }
   }
 
-  // iOS browser: guide to add to home screen
+  // iOS in browser
   if (status === 'ios-browser') {
     return (
       <div
         className="fixed bottom-4 left-4 right-4 z-50 rounded-xl p-4 flex items-start gap-3 shadow-lg"
-        style={{
-          background: 'var(--color-bg-card)',
-          border: '1px solid var(--color-border-subtle)',
-        }}
+        style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-subtle)' }}
       >
         <span className="text-xl shrink-0">📲</span>
         <div className="flex-1 min-w-0">
@@ -145,42 +138,51 @@ export function NotificationInit() {
           </p>
           <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
             Sur iPhone, appuyez sur{' '}
-            <span style={{ color: 'var(--color-text-secondary)' }}>
-              &nbsp;⎋ Partager&nbsp;
-            </span>
-            puis{' '}
-            <span style={{ color: 'var(--color-text-secondary)' }}>
-              « Sur l&apos;écran d&apos;accueil »
-            </span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>⎋ Partager</span>
+            {' '}puis{' '}
+            <span style={{ color: 'var(--color-text-secondary)' }}>« Sur l&apos;écran d&apos;accueil »</span>
             , rouvrez ensuite l&apos;app depuis l&apos;écran d&apos;accueil.
           </p>
         </div>
-        <button
-          onClick={() => setStatus('denied')}
-          className="shrink-0 text-xl leading-none"
-          style={{ color: 'var(--color-text-muted)' }}
-          aria-label="Fermer"
-        >
-          ×
-        </button>
+        <button onClick={() => setStatus('denied')} className="shrink-0 text-xl leading-none" style={{ color: 'var(--color-text-muted)' }}>×</button>
       </div>
     )
   }
 
-  // Error state
+  // Notifications bloquées dans Chrome → guide pour réactiver
+  if (status === 'denied') {
+    return (
+      <div
+        className="fixed bottom-4 left-4 right-4 z-50 rounded-xl p-4 flex items-start gap-3 shadow-lg"
+        style={{ background: 'var(--color-bg-card)', border: '1px solid rgba(255,160,0,0.3)' }}
+      >
+        <span className="text-xl shrink-0">🔕</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+            Notifications bloquées
+          </p>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
+            Dans Chrome : appuyez sur le <span style={{ color: 'var(--color-text-secondary)' }}>🔒 cadenas</span> dans la barre d&apos;adresse → <span style={{ color: 'var(--color-text-secondary)' }}>Notifications → Autoriser</span>, puis rechargez la page.
+          </p>
+        </div>
+        <button onClick={() => setStatus('loading')} className="shrink-0 text-xl leading-none" style={{ color: 'var(--color-text-muted)' }}>×</button>
+      </div>
+    )
+  }
+
+  // Error
   if (status === 'error') {
     return (
       <div
         className="fixed bottom-4 left-4 right-4 z-50 rounded-xl p-4 flex items-center justify-between gap-3 shadow-lg"
-        style={{
-          background: 'var(--color-bg-card)',
-          border: '1px solid rgba(255,0,0,0.3)',
-        }}
+        style={{ background: 'var(--color-bg-card)', border: '1px solid rgba(255,0,0,0.3)' }}
       >
         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          ⚠️ Impossible d&apos;activer les notifications. Vérifiez les paramètres du navigateur.
+          ⚠️ Impossible d&apos;activer les notifications. Rechargez la page et réessayez.
         </p>
-        <button onClick={() => setStatus('denied')} style={{ color: 'var(--color-text-muted)' }}>×</button>
+        <button onClick={() => setStatus('prompt')} className="text-xs px-2 py-1 rounded" style={{ color: 'var(--color-neon-purple)', border: '1px solid rgba(157,0,255,0.3)' }}>
+          Réessayer
+        </button>
       </div>
     )
   }
@@ -190,10 +192,7 @@ export function NotificationInit() {
     return (
       <div
         className="fixed bottom-4 left-4 right-4 z-50 rounded-xl p-4 flex items-center justify-between gap-3 shadow-lg"
-        style={{
-          background: 'var(--color-bg-card)',
-          border: '1px solid var(--color-border-subtle)',
-        }}
+        style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-subtle)' }}
       >
         <div>
           <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
@@ -206,22 +205,15 @@ export function NotificationInit() {
         <div className="flex gap-2 shrink-0">
           <button
             onClick={() => setStatus('denied')}
-            className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-            style={{
-              color: 'var(--color-text-muted)',
-              border: '1px solid var(--color-border-subtle)',
-            }}
+            className="text-xs px-3 py-1.5 rounded-lg"
+            style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border-subtle)' }}
           >
             Plus tard
           </button>
           <button
             onClick={handleAllow}
-            className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
-            style={{
-              background: 'rgba(157,0,255,0.2)',
-              color: 'var(--color-neon-purple)',
-              border: '1px solid rgba(157,0,255,0.3)',
-            }}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium"
+            style={{ background: 'rgba(157,0,255,0.2)', color: 'var(--color-neon-purple)', border: '1px solid rgba(157,0,255,0.3)' }}
           >
             Activer
           </button>
