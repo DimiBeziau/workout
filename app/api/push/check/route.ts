@@ -4,13 +4,14 @@ import { eq, and, isNotNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { weeklyPlans, pushSubscriptions } from '@/lib/db/schema'
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL ?? 'mailto:admin@example.com',
-  process.env.VAPID_PUBLIC_KEY ?? '',
-  process.env.VAPID_PRIVATE_KEY ?? ''
-)
-
 export async function GET(req: NextRequest) {
+  // Configure VAPID inside the handler so it's not called at build time
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL ?? 'mailto:admin@example.com',
+    process.env.VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  )
+
   // Protect with a shared secret header
   const secret = req.headers.get('x-cron-secret')
   if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
