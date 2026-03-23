@@ -45,7 +45,23 @@ function initDb() {
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       UNIQUE(user_id, week_start, day_of_week)
     );
+
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
   `)
+
+  // Safe migration: add scheduled_time if not yet present
+  try {
+    sqlite.exec(`ALTER TABLE weekly_plans ADD COLUMN scheduled_time TEXT`)
+  } catch {
+    // Column already exists
+  }
 
   const db = drizzle(sqlite, { schema })
 

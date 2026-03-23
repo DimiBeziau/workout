@@ -1,9 +1,9 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useTransition, useState, useEffect } from 'react'
 import type { SessionTemplate, WeeklyPlan } from '@/lib/db/schema'
-import { setPlanAction } from '@/app/actions/planning'
-import { Moon, Zap } from 'lucide-react'
+import { setPlanAction, setScheduledTimeAction } from '@/app/actions/planning'
+import { Moon, Zap, Clock } from 'lucide-react'
 import { CustomSelect, type SelectOption } from '@/components/ui/CustomSelect'
 
 interface WeeklyPlanWithTemplate extends WeeklyPlan {
@@ -22,6 +22,12 @@ interface Props {
 
 export function DayCard({ dayName, dayDate, dayOfWeek, weekStart, plan, templates, isToday }: Props) {
   const [isPending, startTransition] = useTransition()
+  const [localTime, setLocalTime] = useState(plan?.scheduledTime ?? '')
+
+  // Sync when plan changes from server revalidation
+  useEffect(() => {
+    setLocalTime(plan?.scheduledTime ?? '')
+  }, [plan?.scheduledTime])
 
   const template = plan?.sessionTemplate ?? null
   const isRest = plan !== null && plan.sessionTemplateId === null
@@ -31,6 +37,13 @@ export function DayCard({ dayName, dayDate, dayOfWeek, weekStart, plan, template
     startTransition(() => {
       const templateId = value === 'rest' || value === '' ? null : Number(value)
       setPlanAction(weekStart, dayOfWeek, templateId)
+    })
+  }
+
+  const handleTimeChange = (value: string) => {
+    setLocalTime(value)
+    startTransition(() => {
+      setScheduledTimeAction(weekStart, dayOfWeek, value || null)
     })
   }
 
@@ -127,6 +140,41 @@ export function DayCard({ dayName, dayDate, dayOfWeek, weekStart, plan, template
 
       {!hasSession && !isRest && (
         <div className="flex-1" />
+      )}
+
+      {/* Time picker — only when a session is assigned */}
+      {hasSession && (
+        <div
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid var(--color-border-subtle)',
+          }}
+        >
+          <Clock size={12} style={{ color: 'var(--color-text-muted)' }} />
+          <input
+            type="time"
+            value={localTime}
+            onChange={(e) => handleTimeChange(e.target.value)}
+            disabled={isPending}
+            className="flex-1 bg-transparent text-xs outline-none min-w-0"
+            style={{
+              color: localTime ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+              colorScheme: 'dark',
+            }}
+            aria-label="Heure de la séance"
+          />
+          {localTime && (
+            <button
+              onClick={() => handleTimeChange('')}
+              className="text-xs leading-none"
+              style={{ color: 'var(--color-text-muted)' }}
+              aria-label="Effacer l'heure"
+            >
+              ×
+            </button>
+          )}
+        </div>
       )}
 
       {/* Selector */}

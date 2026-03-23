@@ -31,6 +31,10 @@ The `(dashboard)` group layout handles auth redirect + Navbar rendering. The act
 
 **Weekly planning:** A `weekly_plans` row links a user + `week_start` (Monday date as `YYYY-MM-DD`) + `day_of_week` (1=Mon…7=Sun) to a `session_template_id` (NULL = rest/unplanned). The `setPlanAction` does delete+insert to emulate upsert.
 
+**Session template types:** `type` is an enum — `'cardio'` or `'renfo'` (strength). These are the only two valid values in the DB schema.
+
+**Push notifications:** Web Push via VAPID (`web-push` package). `push_subscriptions` stores one row per device (endpoint unique). `weekly_plans.scheduled_time` is `HH:MM` local time (nullable). `GET /api/push/check` (protected by `x-cron-secret` header) scans all plans with a time and sends notifications for sessions starting in 9–10 min. Call it every minute via external cron. On iOS, push only works when the app is installed as a PWA (Add to Home Screen) on iOS 16.4+.
+
 ## Key env vars
 
 | Var | Default | Purpose |
@@ -39,6 +43,13 @@ The `(dashboard)` group layout handles auth redirect + Navbar rendering. The act
 | `JWT_SECRET` | (insecure default) | Must be set in production |
 | `ADMIN_USERNAME` | `admin` | Auto-created on first start |
 | `ADMIN_PASSWORD` | `changeme` | Auto-created on first start |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | — | VAPID public key (exposed to client) |
+| `VAPID_PRIVATE_KEY` | — | VAPID private key (server only) |
+| `VAPID_EMAIL` | — | Contact email for VAPID (`mailto:...`) |
+| `CRON_SECRET` | — | Header secret for `GET /api/push/check` |
+| `TZ` | server default | Set to `Europe/Paris` in Docker for correct push timing |
+
+Generate VAPID keys once with: `npx web-push generate-vapid-keys`
 
 ## Tailwind CSS 4
 

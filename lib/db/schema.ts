@@ -23,12 +23,23 @@ export const weeklyPlans = sqliteTable('weekly_plans', {
   weekStart: text('week_start').notNull(),
   dayOfWeek: integer('day_of_week').notNull(),
   sessionTemplateId: integer('session_template_id'),
+  scheduledTime: text('scheduled_time'), // HH:MM local time, nullable
+  createdAt: integer('created_at').notNull().default(0),
+})
+
+export const pushSubscriptions = sqliteTable('push_subscriptions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull(),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
   createdAt: integer('created_at').notNull().default(0),
 })
 
 export const usersRelations = relations(users, ({ many }) => ({
   sessionTemplates: many(sessionTemplates),
   weeklyPlans: many(weeklyPlans),
+  pushSubscriptions: many(pushSubscriptions),
 }))
 
 export const sessionTemplatesRelations = relations(sessionTemplates, ({ one }) => ({
@@ -43,7 +54,12 @@ export const weeklyPlansRelations = relations(weeklyPlans, ({ one }) => ({
   }),
 }))
 
+export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one }) => ({
+  user: one(users, { fields: [pushSubscriptions.userId], references: [users.id] }),
+}))
+
 export type User = typeof users.$inferSelect
 export type SessionTemplate = typeof sessionTemplates.$inferSelect
 export type WeeklyPlan = typeof weeklyPlans.$inferSelect
 export type NewSessionTemplate = typeof sessionTemplates.$inferInsert
+export type PushSubscription = typeof pushSubscriptions.$inferSelect
