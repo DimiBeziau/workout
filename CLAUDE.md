@@ -43,7 +43,7 @@ The `(dashboard)` group layout handles auth redirect + Navbar rendering. The act
 | `JWT_SECRET` | (insecure default) | Must be set in production |
 | `ADMIN_USERNAME` | `admin` | Auto-created on first start |
 | `ADMIN_PASSWORD` | `changeme` | Auto-created on first start |
-| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | — | VAPID public key (exposed to client) |
+| `VAPID_PUBLIC_KEY` | — | VAPID public key — servi au client via `GET /api/push/vapid-key` (runtime, pas de build-time requis) |
 | `VAPID_PRIVATE_KEY` | — | VAPID private key (server only) |
 | `VAPID_EMAIL` | — | Contact email for VAPID (`mailto:...`) |
 | `CRON_SECRET` | — | Header secret for `GET /api/push/check` |
