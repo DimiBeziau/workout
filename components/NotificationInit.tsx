@@ -43,6 +43,7 @@ async function subscribeAndSave(vapidKey: string): Promise<boolean> {
 
 export function NotificationInit() {
   const [status, setStatus] = useState<Status>('loading')
+  const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -83,10 +84,12 @@ export function NotificationInit() {
 
   async function handleAllow() {
     setStatus('subscribing')
+    setErrorMsg('')
     try {
       // Fetch VAPID key (lazy, inside user gesture async chain)
       const vapidKey = await getVapidKey()
       if (!vapidKey) {
+        setErrorMsg('Clé VAPID manquante — vérifiez VAPID_PUBLIC_KEY dans le .env')
         setStatus('error')
         return
       }
@@ -115,9 +118,18 @@ export function NotificationInit() {
         body: JSON.stringify(sub.toJSON()),
       })
 
-      setStatus(res.ok ? 'granted' : 'error')
+      if (!res.ok) {
+        const text = await res.text()
+        setErrorMsg(`Erreur serveur (${res.status}): ${text}`)
+        setStatus('error')
+        return
+      }
+
+      setStatus('granted')
     } catch (err) {
-      console.error('[Push]', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[Push]', msg)
+      setErrorMsg(msg)
       setStatus('error')
     }
   }
@@ -173,19 +185,26 @@ export function NotificationInit() {
   if (status === 'error') {
     return (
       <div
-        className="fixed bottom-4 left-4 right-4 z-50 rounded-xl p-4 flex items-center justify-between gap-3 shadow-lg"
+        className="fixed bottom-4 left-4 right-4 z-50 rounded-xl p-4 flex flex-col gap-2 shadow-lg"
         style={{ background: 'var(--color-bg-card)', border: '1px solid rgba(255,0,0,0.3)' }}
       >
-        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          ⚠️ Échec de l&apos;activation. Rechargez et réessayez.
-        </p>
-        <button
-          onClick={() => setStatus('prompt')}
-          className="text-xs px-2 py-1 rounded shrink-0"
-          style={{ color: 'var(--color-neon-purple)', border: '1px solid rgba(157,0,255,0.3)' }}
-        >
-          Réessayer
-        </button>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>
+            ⚠️ Échec de l&apos;activation
+          </p>
+          <button
+            onClick={() => setStatus('prompt')}
+            className="text-xs px-2 py-1 rounded shrink-0"
+            style={{ color: 'var(--color-neon-purple)', border: '1px solid rgba(157,0,255,0.3)' }}
+          >
+            Réessayer
+          </button>
+        </div>
+        {errorMsg && (
+          <p className="text-xs break-all" style={{ color: 'rgba(255,100,100,0.9)', fontFamily: 'monospace' }}>
+            {errorMsg}
+          </p>
+        )}
       </div>
     )
   }
