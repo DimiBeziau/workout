@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { logoutAction } from '@/app/actions/auth'
+import { NotificationButton } from '@/components/NotificationButton'
 import { Dumbbell, CalendarDays, LogOut } from 'lucide-react'
 
 interface Props {
@@ -48,6 +49,7 @@ export function Navbar({ username }: Props) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationButton />
             <span className="text-xs hidden sm:block" style={{ color: 'var(--color-text-muted)' }}>
               {username}
             </span>
